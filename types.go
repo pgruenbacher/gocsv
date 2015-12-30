@@ -217,6 +217,9 @@ func setField(field reflect.Value, value string) error {
 }
 
 func getFieldAsString(field reflect.Value) (str string, err error) {
+	if canMarshall(field) {
+		return marshall(field)
+	}
 	switch field.Kind() {
 	case reflect.String:
 		return field.String(), nil
@@ -278,6 +281,18 @@ func unmarshall(field reflect.Value, value string) error {
 		return unMarshallIt(dupField.Addr())
 	}
 	return fmt.Errorf("No known conversion from string to " + field.Type().String() + ", " + field.Type().String() + " does not implements TypeUnmarshaller")
+}
+
+func canMarshall(field reflect.Value) bool {
+	if field.CanInterface() && field.Type().Implements(marshallerType) { // Use TypeMarshaller when possible
+		return true
+	} else if field.CanInterface() && field.Type().Implements(stringerType) { // Otherwise try to use Stringer
+		return true
+	} else if field.CanInterface() && field.Type().Implements(textMarshalerType) { // Otherwise try to use TextMarshaller
+		return true
+	}
+	return false
+
 }
 
 func marshall(field reflect.Value) (value string, err error) {
